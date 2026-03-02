@@ -1,0 +1,39 @@
+name: Download Offline Packages for Ubuntu 22.04
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Fast Download Debs
+        run: |
+          mkdir -p ./offline_packages && cd ./offline_packages
+          sudo apt-get update
+          
+          # 定義你需要的主包
+          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
+          
+          # 1. 直接獲取下載鏈接 (僅限 Ubuntu 官方源，過濾掉報錯的 PPA)
+          # --print-uris 會直接給出 URL，我們用 wget 並行下載，速度極快
+          apt-get install --reinstall --download-only -y $PACKAGES --print-uris | grep -oP "http[^\s']+\.deb" > urls.txt
+          
+          # 2. 使用 wget 批量下載所有 .deb (如果 urls.txt 為空則跳過)
+          if [ -s urls.txt ]; then
+            wget -i urls.txt -nv
+          else
+            echo "No URLs found via print-uris, falling back to simple download."
+            sudo apt-get download $PACKAGES || true
+          fi
+          
+          # 3. 補漏：強制下載主包本身
+          sudo apt-get download $PACKAGES || true
+          
+          # 移除臨時文件並統計
+          rm -f urls.txt
+          ls -lh . | wc -l
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-22.04-fast-bundle
+          path: ./offline_packages/
