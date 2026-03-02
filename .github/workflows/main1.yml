@@ -1,0 +1,27 @@
+name: Download Offline Packages
+on: [workflow_dispatch] # 允許手動點擊運行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 確保這跟你服務器的系統版本一致（22.04用latest，20.04用ubuntu-20.04）
+    steps:
+      - name: Install dependencies downloader
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-rdepends
+
+      - name: Download all deb packages
+        run: |
+          mkdir ./offline_packages
+          # 獲取所有依賴並下載到目錄中
+          cd ./offline_packages
+          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libcxsparse3 libgflags-dev libgtest-dev"
+          
+          # 使用 apt-get download 下載包本身及其遞歸依賴
+          apt-get download $(apt-rdepends $PACKAGES | grep -v "^ " | grep -v "debconf-2.0")
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-deps-bundle
+          path: ./offline_packages/
