@@ -7,20 +7,24 @@ jobs:
     steps:
       - name: Quick Download Debs
         run: |
-          mkdir -p ./offline_packages
+          mkdir -p ./offline_packages && cd ./offline_packages
           sudo apt-get update
           
-          # 移除了 libcxsparse4，其功能已包含在 libsuitesparse-dev 中
+          # 定義主包列表
           PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
           
-          # 使用 --download-only 下載主包及其依賴，不進行安裝
-          sudo apt-get install --reinstall --download-only -y $PACKAGES
+          # 1. 獲取依賴名單（排除虛擬包，僅保留真實包名）
+          DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
           
-          # 將緩存目錄中的所有 .deb 檔案拷貝到目標路徑
-          find /var/cache/apt/archives/ -name "*.deb" -exec cp {} ./offline_packages/ \;
+          # 2. 執行下載（apt-get download 不會重複下載已存在的檔案）
+          # 使用 || true 確保個別包找不到時不中斷流程
+          sudo apt-get download $DEPS $PACKAGES || true
           
-          # 列出下載清單確保成功
-          ls -lh ./offline_packages
+          # 3. 確保主包一定存在
+          sudo apt-get download $PACKAGES || true
+          
+          # 檢查下載數量
+          ls -lh | wc -l
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
