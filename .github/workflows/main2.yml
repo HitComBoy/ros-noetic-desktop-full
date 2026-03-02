@@ -1,27 +1,26 @@
 name: Download Offline Packages for Ubuntu 22.04
-   on: [workflow_dispatch]
+on: [workflow_dispatch]
 
-   jobs:
-     build:
-       runs-on: ubuntu-22.04
-       steps:
-         - name: Quick Download Debs
-           run: |
-             mkdir ./offline_packages && cd ./offline_packages
-             sudo apt-get update
-             
-             # 1. 定義你要的原始包（針對 22.04 將 libcxsparse3 改為 libcxsparse4 以免報錯掛掉）
-             PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libcxsparse4 libgflags-dev libgtest-dev"
-             
-             # 2. 使用 --print-uris 獲取下載地址，過濾掉虛擬包，直接並行下載
-             # 這樣只會下載服務器缺失的或指定的包，不會遞歸下載整個作業系統
-             apt-get install --reinstall --download-only -y $PACKAGES
-             
-             # 3. 將緩存的 .deb 拷貝到當前目錄
-             cp /var/cache/apt/archives/*.deb .
-             
-         - name: Upload Artifact
-           uses: actions/upload-artifact@v4
-           with:
-             name: ubuntu-22.04-fast-bundle
-             path: ./offline_packages/
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Quick Download Debs
+        run: |
+          mkdir -p ./offline_packages
+          sudo apt-get update
+          
+          # 定義包名列表
+          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libcxsparse4 libgflags-dev libgtest-dev"
+          
+          # 使用官方推薦的 --download-only 方式，自動解析依賴
+          sudo apt-get install --reinstall --download-only -y $PACKAGES
+          
+          # 將緩存的 .deb 檔案移動到指定目錄
+          find /var/cache/apt/archives/ -name "*.deb" -exec cp {} ./offline_packages/ \;
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-22.04-fast-bundle
+          path: ./offline_packages/
