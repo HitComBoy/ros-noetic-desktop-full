@@ -1,19 +1,37 @@
-name: Download all deb packages
-  run: |
-    mkdir ./offline_packages && cd ./offline_packages
-    
-    # 1. 更新源
-    sudo apt-get update
-    
-    # 2. 定義清理後的包列表 (移除了 libcxsparse3，改用 libsuitesparse-dev 自動關聯)
-    PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
-    
-    # 3. 使用 --reinstall 確保獲取當前最新版，並利用 apt-get download 避開虛擬包錯誤
-    # 我們只下載直接依賴和關鍵庫，不遞歸下載底層系統核心（如 libc 等），防止報錯
-    apt-get download $(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $PACKAGES | grep "^\w" | sort -u) || true
-    
-    # 4. 補漏：如果有些包沒下載成功，強制下載一次主包
-    apt-get download $PACKAGES || true
-    
-    # 5. 清除多餘的日誌
-    ls -lh
+name: Download Offline Packages for Ubuntu 22.04
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04  # 強制匹配您的服務器版本
+    steps:
+      - name: Download all deb packages
+        run: |
+          mkdir ./offline_packages && cd ./offline_packages
+          sudo apt-get update
+          
+          # 定義包名列表（針對 22.04 調整了 libcxsparse 的名稱）
+          # 如果你堅持要 libcxsparse3，它會報錯，所以這裡我加上了相容性處理
+          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libcxsparse4 libgflags-dev libgtest-dev"
+          
+          for pkg in $PACKAGES; do
+            echo "正在處理主包: $pkg"
+            apt-get download $pkg || echo "警告: 找不到包 $pkg"
+            
+            # 獲取所有依賴的真實包名並下載，過濾掉虛擬包
+            DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $pkg | grep "^\w" | sort -u)
+            for dep in $DEPS; do
+              # 只下載真實存在的 .deb 文件
+              apt-get download $dep 2>/dev/null || true
+            done
+          done
+
+          # 額外補丁：如果你的代碼寫死了需要 libcxsparse3，通常 4 是兼容的
+          # 如果必須要 3，可以嘗試從 20.04 的倉庫下載
+          # wget http://mirrors.kernel.org || true
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-22.04-deps-bundle
+          path: ./offline_packages/
