@@ -1,19 +1,19 @@
-      - name: Download all deb packages
-        run: |
-          mkdir ./offline_packages && cd ./offline_packages
-          
-          # 1. 更新源
-          sudo apt-get update
-          
-          # 2. 定義清理後的包列表 (移除了 libcxsparse3，改用 libsuitesparse-dev 自動關聯)
-          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
-          
-          # 3. 使用 --reinstall 確保獲取當前最新版，並利用 apt-get download 避開虛擬包錯誤
-          # 我們只下載直接依賴和關鍵庫，不遞歸下載底層系統核心（如 libc 等），防止報錯
-          apt-get download $(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $PACKAGES | grep "^\w" | sort -u) || true
-          
-          # 4. 補漏：如果有些包沒下載成功，強制下載一次主包
-          apt-get download $PACKAGES || true
-          
-          # 5. 清除多餘的日誌
-          ls -lh
+name: Download all deb packages
+  run: |
+    mkdir ./offline_packages && cd ./offline_packages
+    
+    # 1. 更新源
+    sudo apt-get update
+    
+    # 2. 定義清理後的包列表 (移除了 libcxsparse3，改用 libsuitesparse-dev 自動關聯)
+    PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
+    
+    # 3. 使用 --reinstall 確保獲取當前最新版，並利用 apt-get download 避開虛擬包錯誤
+    # 我們只下載直接依賴和關鍵庫，不遞歸下載底層系統核心（如 libc 等），防止報錯
+    apt-get download $(apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances $PACKAGES | grep "^\w" | sort -u) || true
+    
+    # 4. 補漏：如果有些包沒下載成功，強制下載一次主包
+    apt-get download $PACKAGES || true
+    
+    # 5. 清除多餘的日誌
+    ls -lh
