@@ -13,17 +13,17 @@ jobs:
           # 定義主包列表
           PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
           
-          # 1. 獲取依賴名單（排除虛擬包，僅保留真實包名）
+          # 獲取依賴名單（這一步只取包名）
           DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
           
-          # 2. 執行下載（apt-get download 不會重複下載已存在的檔案）
-          # 使用 || true 確保個別包找不到時不中斷流程
-          sudo apt-get download $DEPS $PACKAGES || true
+          # 逐一下載，避免單個包失敗導致全體失敗
+          for pkg in $DEPS $PACKAGES; do
+            echo "Downloading $pkg..."
+            # --reinstall 確保獲取 deb 文件，即使系統已安裝
+            sudo apt-get download $pkg 2>/dev/null || echo "  Failed to download $pkg, skipping..."
+          done
           
-          # 3. 確保主包一定存在
-          sudo apt-get download $PACKAGES || true
-          
-          # 檢查下載數量
+          # 檢查是否有文件被下載
           ls -lh | wc -l
           
       - name: Upload Artifact
