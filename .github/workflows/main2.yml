@@ -10,14 +10,17 @@ jobs:
           mkdir -p ./offline_packages
           sudo apt-get update
           
-          # 定義包名列表
-          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libcxsparse4 libgflags-dev libgtest-dev"
+          # 移除了 libcxsparse4，其功能已包含在 libsuitesparse-dev 中
+          PACKAGES="libgoogle-glog-dev zsh vim git tmux liblapack-dev libsuitesparse-dev libgflags-dev libgtest-dev"
           
-          # 使用官方推薦的 --download-only 方式，自動解析依賴
+          # 使用 --download-only 下載主包及其依賴，不進行安裝
           sudo apt-get install --reinstall --download-only -y $PACKAGES
           
-          # 將緩存的 .deb 檔案移動到指定目錄
+          # 將緩存目錄中的所有 .deb 檔案拷貝到目標路徑
           find /var/cache/apt/archives/ -name "*.deb" -exec cp {} ./offline_packages/ \;
+          
+          # 列出下載清單確保成功
+          ls -lh ./offline_packages
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
