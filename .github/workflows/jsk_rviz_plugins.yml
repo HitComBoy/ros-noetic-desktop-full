@@ -8,21 +8,21 @@ jobs:
       - name: Force Download Focal Debs
         run: |
           mkdir -p ./focal_bundle && cd ./focal_bundle
-          # 1. 獲取 ROS 金鑰
+          # 1. 獲取 ROS 官方金鑰
           sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
-          # 2. 修正後的完整 Focal (20.04) 路徑
+          # 2. 修正後的完整 Focal (20.04) 官方路徑 (請務必檢查 /ros/ubuntu)
           sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-latest.list'
           sudo apt-get update
           
-          # 3. 定義主包列表
+          # 3. 定義 ROS Noetic 插件主包
           PACKAGES="ros-noetic-jsk-rviz-plugins ros-noetic-jsk-recognition-msgs ros-noetic-jsk-topic-tools"
           
           # 4. 獲取依賴並執行下載
           DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
           sudo apt-get download $DEPS $PACKAGES || true
           
-          # 5. 列出檔案
+          # 5. 列出下載好的 deb 檔案
           ls -lh
           
       - name: Upload Artifact
