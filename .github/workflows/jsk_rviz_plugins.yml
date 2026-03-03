@@ -1,0 +1,29 @@
+name: Download JSK Plugins for ROS Noetic
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04  # ROS Noetic 必須對應 Ubuntu 20.04
+    steps:
+      - name: Download JSK and Deps
+        run: |
+          mkdir -p ./jsk_bundle && cd ./jsk_bundle
+          # 1. 添加 ROS 官方源（否則找不到 ros-noetic-* 開頭的包）
+          sudo sh -c 'echo "deb http://packages.ros.org $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+          curl -s https://raw.githubusercontent.com | sudo apt-key add -
+          sudo apt-get update
+          
+          # 2. 定義要下載的插件
+          PACKAGES="ros-noetic-jsk-rviz-plugins ros-noetic-jsk-recognition-msgs ros-noetic-jsk-topic-tools"
+          
+          # 3. 使用 --download-only 獲取所有依賴的 .deb
+          sudo apt-get install --reinstall --download-only -y $PACKAGES
+          
+          # 4. 拷貝所有緩存的 deb 文件
+          find /var/cache/apt/archives/ -name "*.deb" -exec cp {} . \;
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jsk-plugins-noetic-bundle
+          path: ./jsk_bundle/
