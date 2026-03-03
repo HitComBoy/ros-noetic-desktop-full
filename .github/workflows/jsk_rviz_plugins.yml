@@ -3,26 +3,29 @@ on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # 使用最新的機器，不用排隊
+    runs-on: ubuntu-latest
     steps:
       - name: Force Download Focal Debs
         run: |
           mkdir -p ./focal_bundle && cd ./focal_bundle
-          # 1. 強行寫死 Focal (20.04) 的源，無視當前系統版本
+          # 1. 使用 Ubuntu 金鑰伺服器獲取 ROS 金鑰
+          sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+
+          # 2. 強行寫死 Focal (20.04) 的官方源
           sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-latest.list'
-          curl -s https://raw.githubusercontent.com | sudo apt-key add -
           sudo apt-get update
           
-          # 2. 下載 Noetic (Focal) 版本的插件及其依賴
-          # 注意：這裡使用 download 而不 install，所以不會報系統衝突
+          # 3. 定義主包列表
           PACKAGES="ros-noetic-jsk-rviz-plugins ros-noetic-jsk-recognition-msgs ros-noetic-jsk-topic-tools"
-          sudo apt-get download $PACKAGES || true
           
-          # 3. 獲取所有依賴名單並下載
+          # 4. 獲取依賴並執行下載
           DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
-          sudo apt-get download $DEPS 2>/dev/null || true
+          sudo apt-get download $DEPS $PACKAGES || true
           
-      - name: Upload
+          # 5. 確保下載成功並列出檔案
+          ls -lh
+          
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: jsk-focal-bundle
