@@ -8,10 +8,10 @@ jobs:
       - name: Force Download Focal Debs
         run: |
           mkdir -p ./focal_bundle && cd ./focal_bundle
-          # 1. 使用 Ubuntu 金鑰伺服器獲取 ROS 金鑰
+          # 1. 獲取 ROS 金鑰
           sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
-          # 2. 強行寫死 Focal (20.04) 的官方源
+          # 2. 修正後的完整 Focal (20.04) 路徑
           sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-latest.list'
           sudo apt-get update
           
@@ -22,7 +22,7 @@ jobs:
           DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
           sudo apt-get download $DEPS $PACKAGES || true
           
-          # 5. 確保下載成功並列出檔案
+          # 5. 列出檔案
           ls -lh
           
       - name: Upload Artifact
