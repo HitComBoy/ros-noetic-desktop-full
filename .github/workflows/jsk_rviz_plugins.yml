@@ -1,23 +1,29 @@
-name: Download JSK Focal Bundle
+name: Force Download JSK Focal Bundle
 on: [workflow_dispatch]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04  # 這是關鍵：強制匹配你的容器版本
+    runs-on: ubuntu-latest  # 使用最新的機器，不用排隊
     steps:
-      - name: Download Debs
+      - name: Force Download Focal Debs
         run: |
-          mkdir -p ./focal_debs && cd ./focal_debs
-          # 添加 ROS 官方源
+          mkdir -p ./focal_bundle && cd ./focal_bundle
+          # 1. 強行寫死 Focal (20.04) 的源，無視當前系統版本
           sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-latest.list'
           curl -s https://raw.githubusercontent.com | sudo apt-key add -
           sudo apt-get update
           
-          # 下載 JSK 插件及其所有 Focal 版本的依賴
-          apt-get download $(apt-cache depends --recurse --no-recommends --no-suggests ros-noetic-jsk-rviz-plugins | grep "^\w" | sort -u)
+          # 2. 下載 Noetic (Focal) 版本的插件及其依賴
+          # 注意：這裡使用 download 而不 install，所以不會報系統衝突
+          PACKAGES="ros-noetic-jsk-rviz-plugins ros-noetic-jsk-recognition-msgs ros-noetic-jsk-topic-tools"
+          sudo apt-get download $PACKAGES || true
+          
+          # 3. 獲取所有依賴名單並下載
+          DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
+          sudo apt-get download $DEPS 2>/dev/null || true
           
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: jsk-focal-complete-bundle
-          path: ./focal_debs/
+          name: jsk-focal-bundle
+          path: ./focal_bundle/
