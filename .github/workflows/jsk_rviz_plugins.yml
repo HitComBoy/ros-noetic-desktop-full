@@ -11,19 +11,23 @@ jobs:
           # 1. 獲取 ROS 官方金鑰
           sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
-          # 2. 強力清理並寫入正確的 Focal (20.04) 官方路徑
-          sudo rm -f /etc/apt/sources.list.d/ros-latest.list
-          sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-latest.list'
+          # 2. 清理所有可能干擾的 ROS 配置檔案
+          sudo rm -f /etc/apt/sources.list.d/ros*.list
+
+          # 3. 寫入絕對正確的 Focal (20.04) 官方完整路徑
+          # 這裡必須是 http://packages.ros.org
+          sudo sh -c 'echo "deb http://packages.ros.org focal main" > /etc/apt/sources.list.d/ros-focal.list'
           
-          # 3. 更新並下載
+          # 4. 更新並下載 (只針對 focal 倉庫)
           sudo apt-get update
+          
           PACKAGES="ros-noetic-jsk-rviz-plugins ros-noetic-jsk-recognition-msgs ros-noetic-jsk-topic-tools"
           
-          # 4. 下載主包及所有依賴
+          # 5. 下載主包及其依賴
           DEPS=$(apt-cache depends --recurse --no-recommends --no-suggests $PACKAGES | grep "^\w" | sort -u)
           sudo apt-get download $DEPS $PACKAGES || true
           
-          # 5. 列出檔案
+          # 6. 列出下載好的檔案確認是否帶有 focal 字樣
           ls -lh
           
       - name: Upload Artifact
