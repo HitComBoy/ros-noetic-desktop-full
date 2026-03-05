@@ -14,6 +14,7 @@ RUN apt-get update && \
     zsh \
     vim \
     git \
+    xterm \ 
     tmux \
     liblapack-dev libsuitesparse-dev libcxsparse3 libgflags-dev libgtest-dev && \
     # 安裝 jsk_rviz_plugins 及其依賴
