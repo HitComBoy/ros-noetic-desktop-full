@@ -1,37 +1,44 @@
-# 使用 osrf/ros:noetic-desktop-full 作为基础镜像 (已包含 rviz, gazebo 等)
+# 使用 osrf/ros:noetic-desktop-full
 FROM osrf/ros:noetic-desktop-full
 
-# 1. 切换为 root 用户以便安装软件 (默认可能是 root，但显式声明更安全)
 USER root
 
-# 替换 apt 源并安装依赖
-# 注意：必须在安装 jsk 插件前 update
+# 1. 替換 apt 源並安裝依賴
 RUN apt-get update && \
-    # 安装系统工具库
     apt-get install -y --no-install-recommends \
+    # 【關鍵：加入 x11-xserver-utils 以獲得 xauth】
+    x11-xserver-utils \
+    # 增加 mesa 工具，方便排查 3D 渲染問題
+    mesa-utils \
     libgoogle-glog-dev \
     zsh \
     vim \
     git \
     tmux \
-    liblapack-dev libsuitesparse-dev libcxsparse3 libgflags-dev libgoogle-glog-dev libgtest-dev && \
-    # 【关键修改】安装 jsk_rviz_plugins 及其所有依赖 (含 jsk_recognition_msgs)
+    liblapack-dev libsuitesparse-dev libcxsparse3 libgflags-dev libgtest-dev && \
+    # 安裝 jsk_rviz_plugins 及其依賴
     apt-get install -y ros-noetic-jsk-rviz-plugins && \
-    # 清理缓存以减小镜像体积
+    # 清理快取
     rm -rf /var/lib/apt/lists/*
 
-# 创建 byd 用户，并设置密码
-# 注意：如果在上面安装了需要用户配置的包，顺序可能需要调整，但这里主要装库，顺序影响不大
-RUN useradd -m -s /bin/bash byd && \
+# 2. 創建 byd 用戶
+# 加入 --uid 1000 以確保與宿主機普通用戶權限匹配，減少掛載時的權限困擾
+RUN useradd -m -s /bin/zsh -u 1000 byd && \
     echo "byd:." | chpasswd && \
-    usermod -aG sudo byd
+    # 確保 byd 用戶有 sudo 權限（雖然無 sudo 密碼）
+    apt-get update && apt-get install -y sudo && \
+    echo "byd ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    rm -rf /var/lib/apt/lists/*
 
-# 设置工作目录为 /home/byd
+# 3. 設置工作目錄
 WORKDIR /home/byd
 
-# 切换到 byd 用户
+# 4. 切換到 byd 用戶
 USER byd
 
-# 【可选】初始化 ROS 环境到 by 用户的 bashrc，方便登录后直接使用
-# 因为默认 entrypoint 可能会 source，但为了保险起见：
-RUN echo "source /opt/ros/noetic/setup.bash" >> /home/byd/.bashrc
+# 5. 初始化 ROS 環境與 X11 授權路徑
+RUN echo "source /opt/ros/noetic/setup.bash" >> /home/byd/.zshrc && \
+    echo "source /opt/ros/noetic/setup.bash" >> /home/byd/.bashrc
+
+# 保持容器運行（可選）
+CMD ["/bin/zsh"]
