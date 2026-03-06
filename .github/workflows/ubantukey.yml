@@ -1,1 +1,29 @@
-wget -qO- https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3B4FE6ACC0B21F32 > ubuntu_key.asc
+name: Download Ubuntu Key
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  download-key:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code (可选，如果你需要后续操作代码)
+        uses: actions/checkout@v4
+
+      - name: Download Ubuntu GPG Key
+        run: |
+          wget -qO- "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3B4FE6ACC0B21F32" > ubuntu_key.asc
+      
+      - name: Verify file exists (可选，用于调试)
+        run: |
+          ls -lh ubuntu_key.asc
+          head ubuntu_key.asc
+
+      - name: Upload Key as Artifact (可选，如果你想下载这个生成的文件)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-key
+          path: ubuntu_key.asc
